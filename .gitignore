@@ -1,0 +1,8 @@
+.idea/
+target/
+*.iml
+**/__pycache__/*
+.DS_Store
+appDirectory/
+venv/
+out/

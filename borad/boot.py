@@ -37,9 +37,9 @@
 
 
 # Complete project details at https://RandomNerdTutorials.com/micropython-programming-with-esp32-and-esp8266/
-from servo import Servo
+from common.servo import Servo
 import time
-from umqttsimple import MQTTClient
+from common.umqttsimple import MQTTClient
 import ubinascii
 import machine
 import micropython
@@ -52,7 +52,10 @@ gc.collect()
 
 ssid = 'AARnDW'
 password = 'znTEL3GhNj'
-mqtt_server = b'78fec312d8054d7a91db5a68da9c9c29.s1.eu.hivemq.cloud'
+# grace's
+# mqtt_server = b'78fec312d8054d7a91db5a68da9c9c29.s1.eu.hivemq.cloud'
+# yong's
+mqtt_server = b'b5cc688cbfd444e5a025716f5fd9e972.s1.eu.hivemq.cloud'
 mqtt_user = 'automation'
 mqtt_pass = 'Abc-1234'
 
