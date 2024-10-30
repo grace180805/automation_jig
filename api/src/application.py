@@ -4,6 +4,7 @@ from flask import Flask, request, jsonify
 from flask_mqtt import Mqtt
 
 from api.src import config
+from api.src.database import Jig
 
 app = Flask(__name__)
 
@@ -38,32 +39,83 @@ mqtt_client = Mqtt(app)
 
 @mqtt_client.on_connect()
 def handle_connect(client, userdata, flags, rc):
-   if rc == 0:
-       print('Connected successfully')
-       mqtt_client.subscribe(topic) # subscribe topic
-   else:
-       print('Bad connection. Code:', rc)
+    if rc == 0:
+        print('Connected successfully')
+        mqtt_client.subscribe(topic)  # subscribe topic
+    else:
+        print('Bad connection. Code:', rc)
 
 
 @mqtt_client.on_message()
 def handle_mqtt_message(client, userdata, message):
-   data = dict(
-       topic=message.topic,
-       payload=message.payload.decode()
-  )
-   print('Received message on topic: {topic} with payload: {payload}'.format(**data))
+    data = dict(
+        topic=message.topic,
+        payload=message.payload.decode()
+    )
+    print('Received message on topic: {topic} with payload: {payload}'.format(**data))
 
 
 @app.route('/send', methods=['POST'])
 def publish_message():
     request_data = request.get_json()
     jig_id = request_data["jigID"]
-    topic = request_data["topic"]
+    print(jig_id)
     device_type = request_data["deviceType"]
-    new_topic = '/automation/{}/{}/{}'.format(device_type, jig_id, topic)
+    topic = request_data["topic"]
+    new_topic = '/automation/{}/{}/{}'.format(jig_id, device_type, topic)
     publish_result = mqtt_client.publish(new_topic, topic, qos=2)
     return jsonify({'code': publish_result[0]})
 
 
+@app.route('/jig_model', methods=['PUT'])
+def jig_model_api():
+    request_data = request.get_json()
+    jig_id = request_data["jigID"]
+    jig_model = request_data["model"]
+    jig_model_options = ["scan01", "scan02"]
+    if jig_model not in jig_model_options:
+        return jsonify({'code': 10400, 'message': 'the jig model is not existed!'})
+    new_topic = '/automation/{}/{}'.format(jig_id, jig_model)
+    publish_result = mqtt_client.publish(new_topic, qos=2)
+    record = Jig.get(Jig.jig_id == jig_id)
+    # 更新记录
+    record.model = jig_model
+    record.save()
+    # jig = Jig(jig_id=jig_id, model=jig_model)
+    # return jsonify({'code': publish_result[0]})
+    return jsonify({'code': 200, 'message': 'success'})
+
+
+@app.route('/send_topic', methods=['POST'])
+def send_topic_api():
+    request_data = request.get_json()
+    jig_id = request_data["jigID"]
+    device_type = request_data["deviceType"]
+    topic = request_data["topic"]
+    new_topic = '/automation/{}/{}/{}'.format(jig_id, device_type, topic)
+    publish_result = mqtt_client.publish(new_topic, topic, qos=2)
+    record = Jig.get(Jig.jig_id == jig_id)
+    if 'lock' in topic:
+        record.lock_state = topic
+        record.save()
+    elif 'door' in topic:
+        record.door_state = topic
+        record.save()
+    # return jsonify({'code': publish_result[0]})
+    return jsonify({'code': 200, 'message': 'success'})
+
+
+@app.route('/lock_and_door_status/<jig_id>', methods=['GET'])
+def status_api(jig_id):
+    query = Jig.select().where(Jig.jig_id == jig_id)
+    result = query.get()
+    # jig = Jig(jig_id=jig_id, model=jig_model)
+    # return jsonify({'code': publish_result[0]})
+    data = {'doorState': result.door_state,
+            'lockState': result.lock_state,
+            'model': result.model}
+    return jsonify({'code': 200, 'data': data, 'message': 'success'})
+
+
 if __name__ == '__main__':
-   app.run(host='127.0.0.1', port=5000)
+    app.run(host='127.0.0.1', port=5000)
