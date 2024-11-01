@@ -1,8 +1,10 @@
+import os
+
 from peewee import *
 
 
 def database():
-    return SqliteDatabase('/Users/yozhan/my new/new_jig.db')
+    return SqliteDatabase(os.getcwd() + '/new_jig.db')
 
 
 db = database()
@@ -87,8 +89,12 @@ def add_angle(model, door_closed_angle, door_ajar_angle, door_open_angle, lock_f
 if __name__ == '__main__':
     initialize_database()
     # add_support_topic('terra_scan01', 'lock/open')
-    #add_jig('jig03', 'scan01', '1b:3e:ee:we:e3')
+    # add_jig('jig01', 'forma_scan01', '1b:3e:ee:we:e3')
+    add_angle('forma_scan01', '4000', '4350', '4800', '5273', '4950', '4688', '3504', '3559', '3328')
 
     # 遍历并打印每条记录
     for jig in Jig.select():
         print(jig.jig_id, jig.model, jig.lock_state)
+
+    for angel in LockAndDoorAngle.select():
+        print(angel.model, angel.door_closed_angle)
