@@ -84,7 +84,7 @@ def jig_model_api():
     # time.sleep(10)
     # subscribe_result = mqtt_client.subscribe('servoState', qos=2)
     record = Jig.get(Jig.jig_id == jig_id)
-    # 更新记录
+    # update
     record.model = jig_model
     record.save()
     # jig = Jig(jig_id=jig_id, model=jig_model)
@@ -97,7 +97,8 @@ def jig_model_api():
 #         'door/close': '1',
 #         'door/ajar': '2',
 #         'door/open': '3'
-#     }.get(topic, 'error')  # 'error'为默认返回值，可自设置
+#     }.get(topic, 'error')
+# 'error' is default value, can set by yourself
 
 
 @app.route('/send_topic', methods=['POST'])

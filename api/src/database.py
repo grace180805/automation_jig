@@ -92,7 +92,6 @@ if __name__ == '__main__':
     # add_jig('jig01', 'forma_scan01', '1b:3e:ee:we:e3')
     add_angle('forma_scan01', '4000', '4350', '4800', '5273', '4950', '4688', '3504', '3559', '3328')
 
-    # 遍历并打印每条记录
     for jig in Jig.select():
         print(jig.jig_id, jig.model, jig.lock_state)
 
