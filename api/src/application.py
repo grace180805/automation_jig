@@ -4,7 +4,7 @@ from flask import Flask, request, jsonify
 from flask_mqtt import Mqtt
 
 from api.src import config
-from api.src.database import Jig
+from api.src.database import Jig, LockAndDoorAngle
 
 app = Flask(__name__)
 
@@ -86,14 +86,44 @@ def jig_model_api():
     return jsonify({'code': 200, 'message': 'success'})
 
 
+# def get_angel(topic):
+#     return {
+#         'door/close': '1',
+#         'door/ajar': '2',
+#         'door/open': '3'
+#     }.get(topic, 'error')  # 'error'为默认返回值，可自设置
+
+
 @app.route('/send_topic', methods=['POST'])
 def send_topic_api():
     request_data = request.get_json()
     jig_id = request_data["jigID"]
     device_type = request_data["deviceType"]
     topic = request_data["topic"]
+    model = Jig.select().where(Jig.jig_id == jig_id).get().model
+    print('model:' + model)
+    angel = 4000
+    if topic == 'door/close':
+        angel = LockAndDoorAngle.get(LockAndDoorAngle.model == model).door_closed_angle
+    elif topic == 'door/ajar':
+        angel = LockAndDoorAngle.get(LockAndDoorAngle.model == model).door_ajar_angle
+    elif topic == 'door/close':
+        angel = LockAndDoorAngle.get(LockAndDoorAngle.model == model).door_open_angle
+    elif topic == 'lock/fullyClose':
+        angel = LockAndDoorAngle.get(LockAndDoorAngle.model == model).lock_fully_lock_angle
+    elif topic == 'lock/close':
+        angel = LockAndDoorAngle.get(LockAndDoorAngle.model == model).lock_lock_angle
+    elif topic == 'lock/justClose':
+        angel = LockAndDoorAngle.get(LockAndDoorAngle.model == model).lock_just_lock_angle
+    elif topic == 'lock/justOpen':
+        angel = LockAndDoorAngle.get(LockAndDoorAngle.model == model).lock_just_unlock_angle
+    elif topic == 'lock/open':
+        angel = LockAndDoorAngle.get(LockAndDoorAngle.model == model).lock_unlock_angle
+    elif topic == 'lock/fullyOpen':
+        angel = LockAndDoorAngle.get(LockAndDoorAngle.model == model).lock_fully_unlock_angle
+    print(angel)
     new_topic = '/automation/{}/{}/{}'.format(jig_id, device_type, topic)
-    publish_result = mqtt_client.publish(new_topic, topic, qos=2)
+    publish_result = mqtt_client.publish(new_topic, angel, qos=2)
     record = Jig.get(Jig.jig_id == jig_id)
     if 'lock' in topic:
         record.lock_state = topic
