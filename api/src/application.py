@@ -1,4 +1,5 @@
 import ssl
+import time
 
 from flask import Flask, request, jsonify
 from flask_mqtt import Mqtt
@@ -36,6 +37,8 @@ topic = '#'
 
 mqtt_client = Mqtt(app)
 
+received_messages = []
+
 
 @mqtt_client.on_connect()
 def handle_connect(client, userdata, flags, rc):
@@ -52,6 +55,7 @@ def handle_mqtt_message(client, userdata, message):
         topic=message.topic,
         payload=message.payload.decode()
     )
+    received_messages.append(data['payload'])
     print('Received message on topic: {topic} with payload: {payload}'.format(**data))
 
 
@@ -77,6 +81,8 @@ def jig_model_api():
         return jsonify({'code': 10400, 'message': 'the jig model is not existed!'})
     new_topic = '/automation/{}/{}'.format(jig_id, jig_model)
     publish_result = mqtt_client.publish(new_topic, qos=2)
+    # time.sleep(10)
+    # subscribe_result = mqtt_client.subscribe('servoState', qos=2)
     record = Jig.get(Jig.jig_id == jig_id)
     # 更新记录
     record.model = jig_model
@@ -124,15 +130,23 @@ def send_topic_api():
     print(angel)
     new_topic = '/automation/{}/{}/{}'.format(jig_id, device_type, topic)
     publish_result = mqtt_client.publish(new_topic, angel, qos=2)
-    record = Jig.get(Jig.jig_id == jig_id)
-    if 'lock' in topic:
-        record.lock_state = topic
-        record.save()
-    elif 'door' in topic:
-        record.door_state = topic
-        record.save()
+    time.sleep(10)
+    # subscribe_result = mqtt_client.subscribe('servoState', qos=2)
+    if not received_messages:
+        return jsonify({"message": "No messages received"}), 404
+    latest_message = received_messages.pop(0)
+    if 'success' in latest_message:
+        record = Jig.get(Jig.jig_id == jig_id)
+        if 'lock' in topic:
+            record.lock_state = topic
+            record.save()
+        elif 'door' in topic:
+            record.door_state = topic
+            record.save()
     # return jsonify({'code': publish_result[0]})
-    return jsonify({'code': 200, 'message': 'success'})
+        return jsonify({'code': 200, 'message': 'success'})
+    else:
+        return jsonify({'code': 500, 'message': 'operate jig failed'})
 
 
 @app.route('/lock_and_door_status/<jig_id>', methods=['GET'])
