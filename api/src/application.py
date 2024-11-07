@@ -1,11 +1,11 @@
 import ssl
-import time
 
 from flask import Flask, request, jsonify
 from flask_mqtt import Mqtt
 
-from api.src import config, enum_data
+from api.src import config
 from api.src.database import Jig, LockAndDoorSteps
+from api.src.api_enum_data import OperationEnum, LockAndDoorStatus, Message
 
 app = Flask(__name__)
 
@@ -56,29 +56,23 @@ def handle_mqtt_message(client, userdata, message):
         payload=message.payload.decode()
     )
     # received_messages.append(data['payload'])
-    # flag=1  # turn the servo successfully
-    if 'flag=1' in str(message.payload):
+    # flag=1  # move the servo successfully
+    if Message.SUCCESS.value in str(message.payload):
         record = Jig.get(Jig.jig_id == message.topic[:5])
-        if enum_data.CalibrationEnum.LOCK_FULLY_OPEN.value in message.topic:
-            record.lock_state = enum_data.LockAndDoorStatus.LOCK_UNLOCK.value
-        elif enum_data.CalibrationEnum.LOCK_OPEN.value in message.topic:
-            record.lock_state = enum_data.LockAndDoorStatus.LOCK_UNLOCK.value
-        elif enum_data.CalibrationEnum.LOCK_JUST_OPEN.value in message.topic:
-            record.lock_state = enum_data.LockAndDoorStatus.LOCK_UNLOCK.value
+        if OperationEnum.LOCK_FULLY_OPEN.value or OperationEnum.LOCK_OPEN.value or OperationEnum.LOCK_JUST_OPEN.value \
+                in message.topic:
+            record.lock_state = LockAndDoorStatus.LOCK_UNLOCK.value
 
-        elif enum_data.CalibrationEnum.LOCK_FULLY_CLOSE.value in message.topic:
-            record.lock_state = enum_data.LockAndDoorStatus.LOCK_LOCK.value
-        elif enum_data.CalibrationEnum.LOCK_CLOSE.value in message.topic:
-            record.lock_state = enum_data.LockAndDoorStatus.LOCK_LOCK.value
-        elif enum_data.CalibrationEnum.LOCK_JUST_CLOSE.value in message.topic:
-            record.lock_state = enum_data.LockAndDoorStatus.LOCK_LOCK.value
+        elif OperationEnum.LOCK_FULLY_CLOSE.value or OperationEnum.LOCK_CLOSE.value or OperationEnum.LOCK_JUST_CLOSE \
+                in message.topic:
+            record.lock_state = LockAndDoorStatus.LOCK_LOCK.value
 
-        elif enum_data.CalibrationEnum.DOOR_OPEN.value in message.topic:
-            record.door_state = enum_data.LockAndDoorStatus.DOOR_OPEN.value
-        elif enum_data.CalibrationEnum.DOOR_AJAR.value in message.topic:
-            record.door_state = enum_data.LockAndDoorStatus.DOOR_OPEN.value
-        elif enum_data.CalibrationEnum.DOOR_CLOSE.value in message.topic:
-            record.door_state = enum_data.LockAndDoorStatus.DOOR_CLOSED.value
+        elif OperationEnum.DOOR_OPEN.value or OperationEnum.DOOR_AJAR.value in message.topic:
+            record.door_state = LockAndDoorStatus.DOOR_OPEN.value
+
+        elif OperationEnum.DOOR_CLOSE.value in message.topic:
+            record.door_state = LockAndDoorStatus.DOOR_CLOSED.value
+
         record.save()
 
     print('Received message on topic: {topic} with payload: {payload}'.format(**data))
@@ -106,7 +100,6 @@ def jig_model_api():
         return jsonify({'code': 10400, 'message': 'the jig model is not existed!'})
     new_topic = '{}/{}'.format(jig_id, jig_model)
     publish_result = mqtt_client.publish(new_topic, qos=2)
-    # time.sleep(10)
     # subscribe_result = mqtt_client.subscribe('servoState', qos=2)
     record = Jig.get(Jig.jig_id == jig_id)
     # update
@@ -132,31 +125,32 @@ def send_topic_api():
     device_type = request_data["deviceType"]
     topic = request_data["topic"]
     model = Jig.select().where(Jig.jig_id == jig_id).get().model
+    model_steps_row = LockAndDoorSteps.get(LockAndDoorSteps.model == model)
     steps = 0
 
-    if topic == enum_data.CalibrationEnum.LOCK_FULLY_OPEN.value:
-        steps = LockAndDoorSteps.get(LockAndDoorSteps.model == model).lock_fully_unlock_steps
-    elif topic == enum_data.CalibrationEnum.LOCK_OPEN.value:
-        steps = LockAndDoorSteps.get(LockAndDoorSteps.model == model).lock_unlock_steps
-    elif topic == enum_data.CalibrationEnum.LOCK_JUST_OPEN.value:
-        steps = LockAndDoorSteps.get(LockAndDoorSteps.model == model).lock_just_unlock_steps
+    if topic == OperationEnum.LOCK_FULLY_OPEN.value:
+        steps = model_steps_row.lock_fully_unlock_steps
+    elif topic == OperationEnum.LOCK_OPEN.value:
+        steps = model_steps_row.lock_unlock_steps
+    elif topic == OperationEnum.LOCK_JUST_OPEN.value:
+        steps = model_steps_row.lock_just_unlock_steps
 
-    elif topic == enum_data.CalibrationEnum.LOCK_FULLY_CLOSE.value:
-        steps = LockAndDoorSteps.get(LockAndDoorSteps.model == model).lock_fully_lock_steps
-    elif topic == enum_data.CalibrationEnum.LOCK_CLOSE.value:
-        steps = LockAndDoorSteps.get(LockAndDoorSteps.model == model).lock_lock_steps
-    elif topic == enum_data.CalibrationEnum.LOCK_JUST_CLOSE.value:
-        steps = LockAndDoorSteps.get(LockAndDoorSteps.model == model).lock_just_lock_steps
+    elif topic == OperationEnum.LOCK_FULLY_CLOSE.value:
+        steps = model_steps_row.lock_fully_lock_steps
+    elif topic == OperationEnum.LOCK_CLOSE.value:
+        steps = model_steps_row.lock_lock_steps
+    elif topic == OperationEnum.LOCK_JUST_CLOSE.value:
+        steps = model_steps_row.lock_just_lock_steps
 
-    elif topic == enum_data.CalibrationEnum.DOOR_OPEN.value:
-        steps = LockAndDoorSteps.get(LockAndDoorSteps.model == model).door_open_steps
-    elif topic == enum_data.CalibrationEnum.DOOR_AJAR.value:
-        steps = LockAndDoorSteps.get(LockAndDoorSteps.model == model).door_ajar_steps
-    elif topic == enum_data.CalibrationEnum.DOOR_CLOSE.value:
-        steps = LockAndDoorSteps.get(LockAndDoorSteps.model == model).door_closed_steps
+    elif topic == OperationEnum.DOOR_OPEN.value:
+        steps = model_steps_row.door_open_steps
+    elif topic == OperationEnum.DOOR_AJAR.value:
+        steps = model_steps_row.door_ajar_steps
+    elif topic == OperationEnum.DOOR_CLOSE.value:
+        steps = model_steps_row.door_closed_steps
 
     new_topic = '{}/{}'.format(jig_id, topic)
-    publish_result = mqtt_client.publish(new_topic, 'flag=2&steps='+steps, qos=2)
+    publish_result = mqtt_client.publish(new_topic, Message.MOVE.value+'&steps='+steps, qos=2)
     # time.sleep(10)
     # subscribe_result = mqtt_client.subscribe('servoState', qos=2)
     # if not received_messages:

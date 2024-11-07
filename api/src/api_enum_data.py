@@ -78,7 +78,7 @@ class DecorateNameEnum(Enum):
     TAG_CLS_NAME = '%cls_name'
 
 
-class CalibrationEnum(Enum):
+class OperationEnum(Enum):
     LOCK_FLIPUP = 'lock/flipUp'
     LOCK_FLIPDOWN = 'lock/flipDown'
     LOCK_CALIBRATION = 'lock/calibration'
