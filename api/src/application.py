@@ -4,8 +4,8 @@ import time
 from flask import Flask, request, jsonify
 from flask_mqtt import Mqtt
 
-from api.src import config
-from api.src.database import Jig, LockAndDoorAngle
+from api.src import config, enum_data
+from api.src.database import Jig, LockAndDoorSteps
 
 app = Flask(__name__)
 
@@ -37,7 +37,7 @@ topic = '#'
 
 mqtt_client = Mqtt(app)
 
-received_messages = []
+# received_messages = []
 
 
 @mqtt_client.on_connect()
@@ -55,7 +55,32 @@ def handle_mqtt_message(client, userdata, message):
         topic=message.topic,
         payload=message.payload.decode()
     )
-    received_messages.append(data['payload'])
+    # received_messages.append(data['payload'])
+    # flag=1  # turn the servo successfully
+    if 'flag=1' in str(message.payload):
+        record = Jig.get(Jig.jig_id == message.topic[:5])
+        if enum_data.CalibrationEnum.LOCK_FULLY_OPEN.value in message.topic:
+            record.lock_state = enum_data.LockAndDoorStatus.LOCK_UNLOCK.value
+        elif enum_data.CalibrationEnum.LOCK_OPEN.value in message.topic:
+            record.lock_state = enum_data.LockAndDoorStatus.LOCK_UNLOCK.value
+        elif enum_data.CalibrationEnum.LOCK_JUST_OPEN.value in message.topic:
+            record.lock_state = enum_data.LockAndDoorStatus.LOCK_UNLOCK.value
+
+        elif enum_data.CalibrationEnum.LOCK_FULLY_CLOSE.value in message.topic:
+            record.lock_state = enum_data.LockAndDoorStatus.LOCK_LOCK.value
+        elif enum_data.CalibrationEnum.LOCK_CLOSE.value in message.topic:
+            record.lock_state = enum_data.LockAndDoorStatus.LOCK_LOCK.value
+        elif enum_data.CalibrationEnum.LOCK_JUST_CLOSE.value in message.topic:
+            record.lock_state = enum_data.LockAndDoorStatus.LOCK_LOCK.value
+
+        elif enum_data.CalibrationEnum.DOOR_OPEN.value in message.topic:
+            record.door_state = enum_data.LockAndDoorStatus.DOOR_OPEN.value
+        elif enum_data.CalibrationEnum.DOOR_AJAR.value in message.topic:
+            record.door_state = enum_data.LockAndDoorStatus.DOOR_OPEN.value
+        elif enum_data.CalibrationEnum.DOOR_CLOSE.value in message.topic:
+            record.door_state = enum_data.LockAndDoorStatus.DOOR_CLOSED.value
+        record.save()
+
     print('Received message on topic: {topic} with payload: {payload}'.format(**data))
 
 
@@ -71,7 +96,7 @@ def publish_message():
     return jsonify({'code': publish_result[0]})
 
 
-@app.route('/jig_model', methods=['PUT'])
+@app.route('/jigModel', methods=['PUT'])
 def jig_model_api():
     request_data = request.get_json()
     jig_id = request_data["jigID"]
@@ -100,8 +125,7 @@ def jig_model_api():
 #     }.get(topic, 'error')
 # 'error' is default value, can set by yourself
 
-
-@app.route('/send_topic', methods=['POST'])
+@app.route('/sendTopic', methods=['POST'])
 def send_topic_api():
     request_data = request.get_json()
     jig_id = request_data["jigID"]
@@ -109,48 +133,48 @@ def send_topic_api():
     topic = request_data["topic"]
     model = Jig.select().where(Jig.jig_id == jig_id).get().model
     print('model:' + model)
-    angel = 4000
+    steps = 4000
     if topic == 'door/close':
-        angel = LockAndDoorAngle.get(LockAndDoorAngle.model == model).door_closed_angle
+        steps = LockAndDoorSteps.get(LockAndDoorSteps.model == model).door_closed_steps
     elif topic == 'door/ajar':
-        angel = LockAndDoorAngle.get(LockAndDoorAngle.model == model).door_ajar_angle
-    elif topic == 'door/close':
-        angel = LockAndDoorAngle.get(LockAndDoorAngle.model == model).door_open_angle
+        steps = LockAndDoorSteps.get(LockAndDoorSteps.model == model).door_ajar_steps
+    elif topic == 'door/open':
+        steps = LockAndDoorSteps.get(LockAndDoorSteps.model == model).door_open_steps
     elif topic == 'lock/fullyClose':
-        angel = LockAndDoorAngle.get(LockAndDoorAngle.model == model).lock_fully_lock_angle
+        steps = LockAndDoorSteps.get(LockAndDoorSteps.model == model).lock_fully_lock_steps
     elif topic == 'lock/close':
-        angel = LockAndDoorAngle.get(LockAndDoorAngle.model == model).lock_lock_angle
+        steps = LockAndDoorSteps.get(LockAndDoorSteps.model == model).lock_lock_steps
     elif topic == 'lock/justClose':
-        angel = LockAndDoorAngle.get(LockAndDoorAngle.model == model).lock_just_lock_angle
+        steps = LockAndDoorSteps.get(LockAndDoorSteps.model == model).lock_just_lock_steps
     elif topic == 'lock/justOpen':
-        angel = LockAndDoorAngle.get(LockAndDoorAngle.model == model).lock_just_unlock_angle
+        steps = LockAndDoorSteps.get(LockAndDoorSteps.model == model).lock_just_unlock_steps
     elif topic == 'lock/open':
-        angel = LockAndDoorAngle.get(LockAndDoorAngle.model == model).lock_unlock_angle
+        steps = LockAndDoorSteps.get(LockAndDoorSteps.model == model).lock_unlock_steps
     elif topic == 'lock/fullyOpen':
-        angel = LockAndDoorAngle.get(LockAndDoorAngle.model == model).lock_fully_unlock_angle
-    print(angel)
-    new_topic = '/automation/{}/{}/{}'.format(jig_id, device_type, topic)
-    publish_result = mqtt_client.publish(new_topic, angel, qos=2)
-    time.sleep(10)
+        steps = LockAndDoorSteps.get(LockAndDoorSteps.model == model).lock_fully_unlock_steps
+    print(steps)
+    new_topic = '{}/{}/{}'.format(jig_id, device_type, topic)
+    publish_result = mqtt_client.publish(new_topic, 'flag=2&'+steps, qos=2)
+    # time.sleep(10)
     # subscribe_result = mqtt_client.subscribe('servoState', qos=2)
-    if not received_messages:
-        return jsonify({"message": "No messages received"}), 404
-    latest_message = received_messages.pop(0)
-    if 'success' in latest_message:
-        record = Jig.get(Jig.jig_id == jig_id)
-        if 'lock' in topic:
-            record.lock_state = topic
-            record.save()
-        elif 'door' in topic:
-            record.door_state = topic
-            record.save()
+    # if not received_messages:
+    #     return jsonify({"message": "No messages received"}), 404
+    # latest_message = received_messages.pop(0)
+    # if 'success' in latest_message:
+    #     record = Jig.get(Jig.jig_id == jig_id)
+    #     if 'lock' in topic:
+    #         record.lock_state = topic
+    #         record.save()
+    #     elif 'door' in topic:
+    #         record.door_state = topic
+    #         record.save()
     # return jsonify({'code': publish_result[0]})
-        return jsonify({'code': 200, 'message': 'success'})
-    else:
-        return jsonify({'code': 500, 'message': 'operate jig failed'})
+    return jsonify({'code': 200, 'message': 'success'})
+    # else:
+    #     return jsonify({'code': 500, 'message': 'operate jig failed'})
 
 
-@app.route('/lock_and_door_status/<jig_id>', methods=['GET'])
+@app.route('/lockAndDoorStatus/<jig_id>', methods=['GET'])
 def status_api(jig_id):
     query = Jig.select().where(Jig.jig_id == jig_id)
     result = query.get()
