@@ -59,15 +59,18 @@ def handle_mqtt_message(client, userdata, message):
     # flag=1  # move the servo successfully
     if Message.SUCCESS.value in str(message.payload):
         record = Jig.get(Jig.jig_id == message.topic[:5])
-        if OperationEnum.LOCK_FULLY_OPEN.value or OperationEnum.LOCK_OPEN.value or OperationEnum.LOCK_JUST_OPEN.value \
-                in message.topic:
+        if (OperationEnum.LOCK_FULLY_OPEN.value in message.topic) \
+                or (OperationEnum.LOCK_OPEN.value in message.topic) \
+                or (OperationEnum.LOCK_JUST_OPEN.value in message.topic):
             record.lock_state = LockAndDoorStatus.LOCK_UNLOCK.value
 
-        elif OperationEnum.LOCK_FULLY_CLOSE.value or OperationEnum.LOCK_CLOSE.value or OperationEnum.LOCK_JUST_CLOSE \
-                in message.topic:
+        elif (OperationEnum.LOCK_FULLY_CLOSE.value in message.topic) \
+                or (OperationEnum.LOCK_CLOSE.value in message.topic) \
+                or (OperationEnum.LOCK_JUST_CLOSE.value in message.topic):
             record.lock_state = LockAndDoorStatus.LOCK_LOCK.value
 
-        elif OperationEnum.DOOR_OPEN.value or OperationEnum.DOOR_AJAR.value in message.topic:
+        elif (OperationEnum.DOOR_OPEN.value in message.topic) \
+                or (OperationEnum.DOOR_AJAR.value in message.topic):
             record.door_state = LockAndDoorStatus.DOOR_OPEN.value
 
         elif OperationEnum.DOOR_CLOSE.value in message.topic:
@@ -100,12 +103,10 @@ def jig_model_api():
         return jsonify({'code': 10400, 'message': 'the jig model is not existed!'})
     new_topic = '{}/{}'.format(jig_id, jig_model)
     publish_result = mqtt_client.publish(new_topic, qos=2)
-    # subscribe_result = mqtt_client.subscribe('servoState', qos=2)
     record = Jig.get(Jig.jig_id == jig_id)
     # update
     record.model = jig_model
     record.save()
-    # jig = Jig(jig_id=jig_id, model=jig_model)
     # return jsonify({'code': publish_result[0]})
     return jsonify({'code': 200, 'message': 'success'})
 
@@ -150,21 +151,10 @@ def send_topic_api():
         steps = model_steps_row.door_closed_steps
 
     new_topic = '{}/{}'.format(jig_id, topic)
-    publish_result = mqtt_client.publish(new_topic, Message.MOVE.value+'&steps='+steps, qos=2)
-    # time.sleep(10)
-    # subscribe_result = mqtt_client.subscribe('servoState', qos=2)
+    publish_result = mqtt_client.publish(new_topic, Message.MOVE.value+'&steps='+str(steps), qos=2)
     # if not received_messages:
     #     return jsonify({"message": "No messages received"}), 404
     # latest_message = received_messages.pop(0)
-    # if 'success' in latest_message:
-    #     record = Jig.get(Jig.jig_id == jig_id)
-    #     if 'lock' in topic:
-    #         record.lock_state = topic
-    #         record.save()
-    #     elif 'door' in topic:
-    #         record.door_state = topic
-    #         record.save()
-    # return jsonify({'code': publish_result[0]})
     return jsonify({'code': 200, 'message': 'success'})
     # else:
     #     return jsonify({'code': 500, 'message': 'operate jig failed'})
@@ -174,8 +164,6 @@ def send_topic_api():
 def status_api(jig_id):
     query = Jig.select().where(Jig.jig_id == jig_id)
     result = query.get()
-    # jig = Jig(jig_id=jig_id, model=jig_model)
-    # return jsonify({'code': publish_result[0]})
     data = {'doorState': result.door_state,
             'lockState': result.lock_state,
             'model': result.model}
