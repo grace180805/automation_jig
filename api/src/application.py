@@ -1,13 +1,27 @@
 import ssl
 
-from flask import Flask, request, jsonify
+from flask import request, jsonify
 from flask_mqtt import Mqtt
 
 from api.src import config
 from api.src.database import Jig, LockAndDoorSteps
 from api.src.api_enum_data import OperationEnum, LockAndDoorStatus, Message
 
+import logging
+from logging.handlers import RotatingFileHandler
+from flask import Flask
+
 app = Flask(__name__)
+
+if not app.debug:
+    handler = RotatingFileHandler('api_server.log', maxBytes=10000, backupCount=3)
+    handler.setLevel(logging.INFO)
+    formatter = logging.Formatter(
+        '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
+    )
+    handler.setFormatter(formatter)
+    app.logger.addHandler(handler)
+    app.logger.setLevel(logging.INFO)
 
 # method 1
 # app.config['MQTT_BROKER_URL'] = config.configure["mqtt_host"]
@@ -101,8 +115,9 @@ def jig_model_api():
     jig_model_options = ["forma_scan01", "forma_scan02"]
     if jig_model not in jig_model_options:
         return jsonify({'code': 10400, 'message': 'the jig model is not existed!'})
-    new_topic = '{}/{}'.format(jig_id, jig_model)
+    new_topic = '{}/{}'.format(jig_id, OperationEnum.DOOR_CLOSE.value)
     publish_result = mqtt_client.publish(new_topic, qos=2)
+    app.logger.info("publish init jig topic")
     record = Jig.get(Jig.jig_id == jig_id)
     # update
     record.model = jig_model
