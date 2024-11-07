@@ -70,7 +70,6 @@ def handle_mqtt_message(client, userdata, message):
         payload=message.payload.decode()
     )
     # received_messages.append(data['payload'])
-    # flag=1  # move the servo successfully
     if Message.SUCCESS.value in str(message.payload):
         record = Jig.get(Jig.jig_id == message.topic[:5])
         if (OperationEnum.LOCK_FULLY_OPEN.value in message.topic) \
