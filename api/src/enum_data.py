@@ -112,6 +112,13 @@ class LockAndDoorStatus(Enum):
     JIG_ON = 1
     JIG_OFF = 0
 
+
+class Message(Enum):
+    MOVE = 'flag=2'
+    SUCCESS = 'flag=1'
+    FAIL = 'flag=0'
+
+
 class WindowActuatorStatusEnum(Enum):
     WA_FULL = 'Full'
     WA_HALF = 'Half'
@@ -124,6 +131,3 @@ class LatchTiming(Enum):
     SEC_10 = '10'
     SEC_20 = '20'
     SEC_30 = '30'
-
-
-

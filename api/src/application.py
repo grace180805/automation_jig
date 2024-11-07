@@ -101,7 +101,7 @@ def jig_model_api():
     request_data = request.get_json()
     jig_id = request_data["jigID"]
     jig_model = request_data["model"]
-    jig_model_options = ["scan01", "scan02"]
+    jig_model_options = ["forma_scan01", "forma_scan02"]
     if jig_model not in jig_model_options:
         return jsonify({'code': 10400, 'message': 'the jig model is not existed!'})
     new_topic = '{}/{}'.format(jig_id, jig_model)
@@ -155,8 +155,8 @@ def send_topic_api():
     elif topic == enum_data.CalibrationEnum.DOOR_CLOSE.value:
         steps = LockAndDoorSteps.get(LockAndDoorSteps.model == model).door_closed_steps
 
-    new_topic = '{}/{}/{}'.format(jig_id, device_type, topic)
-    publish_result = mqtt_client.publish(new_topic, 'flag=2&'+steps, qos=2)
+    new_topic = '{}/{}'.format(jig_id, topic)
+    publish_result = mqtt_client.publish(new_topic, 'flag=2&steps='+steps, qos=2)
     # time.sleep(10)
     # subscribe_result = mqtt_client.subscribe('servoState', qos=2)
     # if not received_messages:
