@@ -104,7 +104,7 @@ def jig_model_api():
     jig_model_options = ["scan01", "scan02"]
     if jig_model not in jig_model_options:
         return jsonify({'code': 10400, 'message': 'the jig model is not existed!'})
-    new_topic = '/automation/{}/{}'.format(jig_id, jig_model)
+    new_topic = '{}/{}'.format(jig_id, jig_model)
     publish_result = mqtt_client.publish(new_topic, qos=2)
     # time.sleep(10)
     # subscribe_result = mqtt_client.subscribe('servoState', qos=2)
@@ -132,27 +132,29 @@ def send_topic_api():
     device_type = request_data["deviceType"]
     topic = request_data["topic"]
     model = Jig.select().where(Jig.jig_id == jig_id).get().model
-    print('model:' + model)
-    steps = 4000
-    if topic == 'door/close':
-        steps = LockAndDoorSteps.get(LockAndDoorSteps.model == model).door_closed_steps
-    elif topic == 'door/ajar':
-        steps = LockAndDoorSteps.get(LockAndDoorSteps.model == model).door_ajar_steps
-    elif topic == 'door/open':
-        steps = LockAndDoorSteps.get(LockAndDoorSteps.model == model).door_open_steps
-    elif topic == 'lock/fullyClose':
-        steps = LockAndDoorSteps.get(LockAndDoorSteps.model == model).lock_fully_lock_steps
-    elif topic == 'lock/close':
-        steps = LockAndDoorSteps.get(LockAndDoorSteps.model == model).lock_lock_steps
-    elif topic == 'lock/justClose':
-        steps = LockAndDoorSteps.get(LockAndDoorSteps.model == model).lock_just_lock_steps
-    elif topic == 'lock/justOpen':
-        steps = LockAndDoorSteps.get(LockAndDoorSteps.model == model).lock_just_unlock_steps
-    elif topic == 'lock/open':
-        steps = LockAndDoorSteps.get(LockAndDoorSteps.model == model).lock_unlock_steps
-    elif topic == 'lock/fullyOpen':
+    steps = 0
+
+    if topic == enum_data.CalibrationEnum.LOCK_FULLY_OPEN.value:
         steps = LockAndDoorSteps.get(LockAndDoorSteps.model == model).lock_fully_unlock_steps
-    print(steps)
+    elif topic == enum_data.CalibrationEnum.LOCK_OPEN.value:
+        steps = LockAndDoorSteps.get(LockAndDoorSteps.model == model).lock_unlock_steps
+    elif topic == enum_data.CalibrationEnum.LOCK_JUST_OPEN.value:
+        steps = LockAndDoorSteps.get(LockAndDoorSteps.model == model).lock_just_unlock_steps
+
+    elif topic == enum_data.CalibrationEnum.LOCK_FULLY_CLOSE.value:
+        steps = LockAndDoorSteps.get(LockAndDoorSteps.model == model).lock_fully_lock_steps
+    elif topic == enum_data.CalibrationEnum.LOCK_CLOSE.value:
+        steps = LockAndDoorSteps.get(LockAndDoorSteps.model == model).lock_lock_steps
+    elif topic == enum_data.CalibrationEnum.LOCK_JUST_CLOSE.value:
+        steps = LockAndDoorSteps.get(LockAndDoorSteps.model == model).lock_just_lock_steps
+
+    elif topic == enum_data.CalibrationEnum.DOOR_OPEN.value:
+        steps = LockAndDoorSteps.get(LockAndDoorSteps.model == model).door_open_steps
+    elif topic == enum_data.CalibrationEnum.DOOR_AJAR.value:
+        steps = LockAndDoorSteps.get(LockAndDoorSteps.model == model).door_ajar_steps
+    elif topic == enum_data.CalibrationEnum.DOOR_CLOSE.value:
+        steps = LockAndDoorSteps.get(LockAndDoorSteps.model == model).door_closed_steps
+
     new_topic = '{}/{}/{}'.format(jig_id, device_type, topic)
     publish_result = mqtt_client.publish(new_topic, 'flag=2&'+steps, qos=2)
     # time.sleep(10)
