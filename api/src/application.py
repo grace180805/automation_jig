@@ -3,9 +3,9 @@ import ssl
 from flask import request, jsonify
 from flask_mqtt import Mqtt
 
-from api.src import config
-from api.src.database import Jig, LockAndDoorSteps
-from api.src.api_enum_data import OperationEnum, LockAndDoorStatus, Message
+import config
+from database import Jig, LockAndDoorSteps
+from api_enum_data import OperationEnum, LockAndDoorStatus, Message
 
 import logging
 from logging.handlers import RotatingFileHandler
@@ -185,4 +185,4 @@ def status_api(jig_id):
 
 
 if __name__ == '__main__':
-    app.run(host='127.0.0.1', port=5000)
+    app.run(host='0.0.0.0', port=5000)
