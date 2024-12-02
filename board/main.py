@@ -60,11 +60,21 @@ def sub_cb(topic, msg):
         or str_topic.find(CalibrationEnum.LOCK_FULLY_OPEN)>-1
         or str_topic.find(CalibrationEnum.LOCK_FULLY_CLOSE)>-1) and msg.find(MessageEnum.move)>-1:
         
-        uart.write(CalibrationEnum.cmd[str_topic[6:]])
+        
+        steps = str(msg).split("&")[1]
+        step = steps.split('=')[1]
+        step = step[:-1]
+        inst = uart.get_instructions(step)
+        uart.clear_data()
+        time.sleep(2)
+        uart.write(inst)
+        
+#         uart.write(CalibrationEnum.cmd[str_topic[6:]])
         time.sleep(2)
         if(uart.is_return_cmd_success()):
             mqtt_client.publish(topic, MessageEnum.success)
-            
+
+        uart.clear_data()
 
 def restart_and_reconnect():
     print('Failed to connect to MQTT broker. Reconnecting...')
