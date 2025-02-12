@@ -1,5 +1,6 @@
 # Complete project details at https://RandomNerdTutorials.com/micropython-programming-with-esp32-and-esp8266/
 from common.servo import Servo
+from common.my_servo import MyServo
 from common.wifi import WiFi
 from common.config import configure
 from common.umqttsimple import MQTTClient
@@ -52,6 +53,7 @@ def sub_cb(topic, msg):
 
 
     uart = MyUART()  
+    my_servo = MyServo()
     
     if (str_topic.find(CalibrationEnum.LOCK_OPEN)>-1
         or str_topic.find(CalibrationEnum.LOCK_CLOSE)>-1
@@ -75,6 +77,14 @@ def sub_cb(topic, msg):
             mqtt_client.publish(topic, MessageEnum.success)
 
         uart.clear_data()
+    elif str_topic.find(CalibrationEnum.DOOR_CLOSE)>-1 and msg.find(MessageEnum.move)>-1:   
+        my_servo.write_angle(40, release=True)
+    elif str_topic.find(CalibrationEnum.DOOR_AJAR)>-1 and msg.find(MessageEnum.move)>-1:
+        my_servo.write_angle(25)
+    elif str_topic.find(CalibrationEnum.DOOR_OPEN)>-1 and msg.find(MessageEnum.move)>-1:
+        my_servo.write_angle(0)
+        
+        
 
 def restart_and_reconnect():
     print('Failed to connect to MQTT broker. Reconnecting...')
