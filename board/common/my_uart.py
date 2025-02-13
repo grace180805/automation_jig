@@ -2,7 +2,7 @@ from machine import UART
 
 class MyUART:
     
-    return_cmd = 'FF FF 01 02 00 FC'
+    return_cmd = 'FF FF 01 02 00 FC FF FF 01 02 00 FC'
     
     
     def __init__(self, uart_id = 2, baudrate=1000000, bits=8, parity=None, stop=1, rx=16,tx=17):
@@ -20,10 +20,11 @@ class MyUART:
             return text
         
     def is_return_cmd_success(self):
+        print('checking return...')
         data = self.read()
         return_data = ' '.join(["%02X" % x for x in data])
+        print('read data: %s ' % (return_data))
         if return_data == self.return_cmd:
-            print('read data: %s ' % (return_data))
             return True
         else:
             return False

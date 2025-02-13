@@ -21,6 +21,7 @@ class Jig(BaseModel):
     model = CharField()
     lock_state = IntegerField(null=0)
     door_state = IntegerField(null=0)
+    jig_state = IntegerField(null=0)
     last_topic = CharField()
     MAC_address = CharField()
     device_type = CharField(default="lock")
@@ -57,6 +58,7 @@ def add_jig(jig_id, model, MAC_address):
               model=model,
               lock_state='0',
               door_state='0',
+              jig_state='0',
               last_topic='lock/close',
               MAC_address=MAC_address,
               device_type='lock')
@@ -89,7 +91,7 @@ def add_steps(model, door_closed_steps, door_ajar_steps, door_open_steps, lock_f
 if __name__ == '__main__':
     initialize_database()
     # add_support_topic('terra_scan01', 'lock/open')
-    #add_jig('jig01', 'forma_scan01', '1b:3e:ee:we:e3')
+    add_jig('jig01', 'forma_scan01', '1b:3e:ee:we:e3')
     add_steps('forma_scan01', '4000', '4350', '4800', '5273', '4950', '4688', '3504', '3559', '3328')
 
     for jig in Jig.select():
