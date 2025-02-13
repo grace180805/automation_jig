@@ -1,19 +1,16 @@
 # Complete project details at https://RandomNerdTutorials.com/micropython-programming-with-esp32-and-esp8266/
-from common.servo import Servo
-from common.my_servo import MyServo
-from common.wifi import WiFi
-from common.config import configure
-from common.umqttsimple import MQTTClient
-from common.my_mqtt import MyMQTT
-from common.my_uart import MyUART
-from common.enum_data import CalibrationEnum
-from common.enum_data import MessageEnum
+from board.common.my_servo import MyServo
+from board.common.wifi import WiFi
+from board.common.config import configure
+from board.common.my_mqtt import MyMQTT
+from board.common.my_uart import MyUART
+from board.common.enum_data import CalibrationEnum
+from board.common.enum_data import MessageEnum
 from common import logging
 
 import time
 import ubinascii
 import machine
-import micropython
 import esp
 import gc
 
@@ -73,16 +70,16 @@ def sub_cb(topic, msg):
         
 #         uart.write(CalibrationEnum.cmd[str_topic[6:]])
         time.sleep(2)
-        if(uart.is_return_cmd_success()):
+        if uart.is_return_cmd_success():
             mqtt_client.publish(topic, MessageEnum.success)
 
         uart.clear_data()
-    elif str_topic.find(CalibrationEnum.DOOR_CLOSE)>-1 and msg.find(MessageEnum.move)>-1:   
-        my_servo.write_angle(40, release=True)
+    elif str_topic.find(CalibrationEnum.DOOR_CLOSE)>-1 and msg.find(MessageEnum.move)>-1:
+        my_servo.write_angle(45)
     elif str_topic.find(CalibrationEnum.DOOR_AJAR)>-1 and msg.find(MessageEnum.move)>-1:
-        my_servo.write_angle(25)
+        my_servo.write_angle(35)
     elif str_topic.find(CalibrationEnum.DOOR_OPEN)>-1 and msg.find(MessageEnum.move)>-1:
-        my_servo.write_angle(0)
+        my_servo.write_angle(5)
         
         
 
