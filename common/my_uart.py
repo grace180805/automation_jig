@@ -2,11 +2,12 @@ import time
 
 from machine import UART
 
-
 class MyUART:
-    return_cmd = 'FF FF 01 02 00 FC'
 
-    def __init__(self, uart_id=2, baudrate=1000000, bits=8, parity=None, stop=1, rx=16, tx=17):
+    return_cmd = 'FF FF 01 02 00 FC FF FF 01 02 00 FC'
+
+
+    def __init__(self, uart_id = 2, baudrate=1000000, bits=8, parity=None, stop=1, rx=16,tx=17):
         self.uart = UART(uart_id)
         self.uart.init(baudrate=baudrate, bits=bits, parity=parity, stop=stop, rx=rx, tx=tx)
 
@@ -21,10 +22,11 @@ class MyUART:
             return text
 
     def is_return_cmd_success(self):
+        print('checking return...')
         data = self.read()
         return_data = ' '.join(["%02X" % x for x in data])
+        print('read data: %s ' % (return_data))
         if return_data == self.return_cmd:
-            print('read data: %s ' % (return_data))
             return True
         else:
             return False
@@ -44,7 +46,7 @@ class MyUART:
         else:
             hex_result = hex(sum_result).upper()[2:]
 
-        inverted_result = ~int(hex_result, 16) & 0xFF  # 转换成十进制之后取反
+        inverted_result = ~int(hex_result, 16) & 0xFF # 转换成十进制之后取反
         hex_string = hex(abs(inverted_result)).upper()[2:]  # 转换成十六进制去掉结果前面的'0X'
 
         if len(hex_string) % 2 != 0:

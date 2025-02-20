@@ -68,7 +68,8 @@ def sub_cb(topic, msg):
 
 
     uart = MyUART()  
-    
+    my_servo = MyServo()
+
     if (str_topic.find(CalibrationEnum.LOCK_OPEN)>-1
         or str_topic.find(CalibrationEnum.LOCK_CLOSE)>-1
         or str_topic.find(CalibrationEnum.LOCK_JUST_OPEN)>-1
@@ -87,10 +88,18 @@ def sub_cb(topic, msg):
         
 #         uart.write(CalibrationEnum.cmd[str_topic[6:]])
         time.sleep(2)
-        if(uart.is_return_cmd_success()):
+        if uart.is_return_cmd_success():
             mqtt_client.publish(topic, MessageEnum.success)
 
         uart.clear_data()
+    elif str_topic.find(CalibrationEnum.DOOR_CLOSE)>-1 and msg.find(MessageEnum.move)>-1:
+        my_servo.write_angle(45)
+    elif str_topic.find(CalibrationEnum.DOOR_AJAR)>-1 and msg.find(MessageEnum.move)>-1:
+        my_servo.write_angle(35)
+    elif str_topic.find(CalibrationEnum.DOOR_OPEN)>-1 and msg.find(MessageEnum.move)>-1:
+        my_servo.write_angle(5)
+
+
 
     if (str_topic.find(CalibrationEnum.LOCK_FLIPUP) > -1) and msg.find(MessageEnum.move) > -1:
         retrieve(sts_servo.controlTorque, 1, TurnOnTorque)
@@ -124,7 +133,7 @@ if __name__ == '__main__':
     #     print(f"Torque Enabled! Servo holding position at {current_position}.")
     # else:
     #     print("Failed to read servo position!")
-    
+
     my_mqtt= MyMQTT(client_id = client_id, mqtt_server = mqtt_server,mqtt_user=mqtt_user, mqtt_pwd = mqtt_pwd)
     
     try:

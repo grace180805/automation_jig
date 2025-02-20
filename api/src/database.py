@@ -21,6 +21,7 @@ class Jig(BaseModel):
     model = CharField()
     lock_state = IntegerField(null=0)
     door_state = IntegerField(null=0)
+    jig_state = IntegerField(null=0)
     last_topic = CharField()
     MAC_address = CharField()
     device_type = CharField(default="lock")
@@ -57,6 +58,7 @@ def add_jig(jig_id, model, MAC_address):
               model=model,
               lock_state='0',
               door_state='0',
+              jig_state='0',
               last_topic='lock/close',
               MAC_address=MAC_address,
               device_type='lock')

@@ -180,6 +180,7 @@ def status_api(jig_id):
     result = query.get()
     data = {'doorState': result.door_state,
             'lockState': result.lock_state,
+            "jigState": result.jig_state,
             'model': result.model}
     return jsonify({'code': 200, 'data': data, 'message': 'success'})
 
