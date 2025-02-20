@@ -97,7 +97,7 @@ def handle_mqtt_message(client, userdata, message):
 @app.route('/send', methods=['POST'])
 def publish_message():
     request_data = request.get_json()
-    jig_id = request_data["jigID"]
+    jig_id = request_data["jigId"]
     print(jig_id)
     device_type = request_data["deviceType"]
     topic = request_data["topic"]
@@ -109,7 +109,7 @@ def publish_message():
 @app.route('/jigModel', methods=['PUT'])
 def jig_model_api():
     request_data = request.get_json()
-    jig_id = request_data["jigID"]
+    jig_id = request_data["jigId"]
     jig_model = request_data["model"]
     jig_model_options = ["forma_scan01", "forma_scan02"]
     if jig_model not in jig_model_options:
@@ -136,7 +136,7 @@ def jig_model_api():
 @app.route('/sendTopic', methods=['POST'])
 def send_topic_api():
     request_data = request.get_json()
-    jig_id = request_data["jigID"]
+    jig_id = request_data["jigId"]
     device_type = request_data["deviceType"]
     topic = request_data["topic"]
     model = Jig.select().where(Jig.jig_id == jig_id).get().model

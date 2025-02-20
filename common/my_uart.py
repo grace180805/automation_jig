@@ -1,24 +1,25 @@
+import time
+
 from machine import UART
 
+
 class MyUART:
-    
     return_cmd = 'FF FF 01 02 00 FC'
-    
-    
-    def __init__(self, uart_id = 2, baudrate=1000000, bits=8, parity=None, stop=1, rx=16,tx=17):
+
+    def __init__(self, uart_id=2, baudrate=1000000, bits=8, parity=None, stop=1, rx=16, tx=17):
         self.uart = UART(uart_id)
-        self.uart.init(baudrate=baudrate, bits=bits, parity=parity, stop=stop, rx=rx,tx=tx)
-    
+        self.uart.init(baudrate=baudrate, bits=bits, parity=parity, stop=stop, rx=rx, tx=tx)
+
     def write(self, data):
         print('write data: %s ' % (data))
         data = bytes.fromhex(data)
         self.uart.write(data)
-        
+
     def read(self):
         if self.uart.any():
             text = self.uart.readline()
             return text
-        
+
     def is_return_cmd_success(self):
         data = self.read()
         return_data = ' '.join(["%02X" % x for x in data])
@@ -27,7 +28,7 @@ class MyUART:
             return True
         else:
             return False
-        
+
     def check_sum(self, hex_str):
         """
         Check Sum = ~ (ID + Length + Instruction + Parameter1 + ... Parameter N) 若
@@ -43,9 +44,9 @@ class MyUART:
         else:
             hex_result = hex(sum_result).upper()[2:]
 
-        inverted_result = ~int(hex_result, 16) & 0xFF # 转换成十进制之后取反
+        inverted_result = ~int(hex_result, 16) & 0xFF  # 转换成十进制之后取反
         hex_string = hex(abs(inverted_result)).upper()[2:]  # 转换成十六进制去掉结果前面的'0X'
-        
+
         if len(hex_string) % 2 != 0:
             return '0' + hex_string
         else:
@@ -58,7 +59,7 @@ class MyUART:
         hex_string = hex(int(steps))[2:]  # 转换为十六进制字符串，去掉前面的'0x'
         if len(hex_string) % 2 != 0:
             hex_string = '0' + hex_string  # 确保字符串长度为偶数，方便分组
-        byte_list = [hex_string[i:i+2] for i in range(0, len(hex_string), 2)]
+        byte_list = [hex_string[i:i + 2] for i in range(0, len(hex_string), 2)]
         return byte_list
 
     def get_instructions(self, steps):

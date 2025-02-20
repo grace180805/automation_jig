@@ -1,8 +1,6 @@
 # Complete project details at https://RandomNerdTutorials.com/micropython-programming-with-esp32-and-esp8266/
-from common.servo import Servo
 from common.wifi import WiFi
-from common.config import configure
-from common.umqttsimple import MQTTClient
+from common.config import configure, MAX_RETRIES
 from common.my_mqtt import MyMQTT
 from common.my_uart import MyUART
 from common.enum_data import CalibrationEnum
@@ -12,7 +10,6 @@ from common import logging
 import time
 import ubinascii
 import machine
-import micropython
 import esp
 import gc
 
@@ -43,6 +40,25 @@ def get_logger():
     logger.addHandler(stream_handler)
     return logger
 
+
+def retrieve(func, *args):
+    retry_count = 0
+    while retry_count < MAX_RETRIES:
+        result = func(*args)
+        result_value=COMM_RX_FAIL
+        error=0
+        if len(result) == 2:
+            result_value, error = result
+        elif len(result) == 3:
+            data, result_value, error = result
+        if result_value == COMM_SUCCESS:
+            if error != 0:
+                print("test: ",error)
+                utils.info("%s" % sts_servo.getRxPacketError(error))
+            else:
+                return data if len(result) == 3 else None
+        else:
+            retry_count += 1
 
 def sub_cb(topic, msg):
     str_topic = topic.decode("utf-8")
@@ -76,6 +92,14 @@ def sub_cb(topic, msg):
 
         uart.clear_data()
 
+    if (str_topic.find(CalibrationEnum.LOCK_FLIPUP) > -1) and msg.find(MessageEnum.move) > -1:
+        retrieve(sts_servo.controlTorque, 1, TurnOnTorque)
+        servoStatus = 1
+        needIntervent = False
+        pos, _, _ = sts_servo.readPosition()
+        msg = {"lockState": checkLockStatus(pos), "mac": mac_str, "lastTopic": command}
+        client.publish(topic='lock/status', msg=json.dumps(msg), qos=2)
+
 def restart_and_reconnect():
     print('Failed to connect to MQTT broker. Reconnecting...')
     time.sleep(10)
@@ -93,6 +117,13 @@ if __name__ == '__main__':
     mqtt_user = configure["mqtt_user"]
     mqtt_pwd = configure["mqtt_pwd"]
     sub_topic = configure["sub_topic"]
+
+    # current_position = uart.read_servo_position()  # 读取当前角度
+    # if current_position is not None:
+    #     uart.enable_torque(True)  # 启用扭矩保持
+    #     print(f"Torque Enabled! Servo holding position at {current_position}.")
+    # else:
+    #     print("Failed to read servo position!")
     
     my_mqtt= MyMQTT(client_id = client_id, mqtt_server = mqtt_server,mqtt_user=mqtt_user, mqtt_pwd = mqtt_pwd)
     
@@ -110,4 +141,3 @@ if __name__ == '__main__':
             mqtt_client.check_msg()
         except OSError as e:
             restart_and_reconnect()
-    
