@@ -91,7 +91,7 @@ class MyUART:
 
     def close_torque(self):
         data = 'FF FF 01 04 03 28 00 CF'
-        print('open_torque data: %s ' % (data))
+        print('close_torque data: %s ' % (data))
         hex_data = bytes.fromhex(data)
         self.uart.write(hex_data)
 
