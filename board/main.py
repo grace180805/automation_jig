@@ -67,7 +67,7 @@ def sub_cb(topic, msg):
         step = steps.split('=')[1]
         step = step[:-1]
         inst = uart.get_instructions(step)
-        uart.clear_data()
+        uart.close_torque()
         time.sleep(2)
         uart.write(inst)
         
@@ -76,7 +76,7 @@ def sub_cb(topic, msg):
         if uart.is_return_cmd_success():
             mqtt_client.publish(topic, MessageEnum.success)
 
-        uart.clear_data()
+        uart.close_torque()
     elif str_topic.find(CalibrationEnum.DOOR_CLOSE)>-1 and msg.find(MessageEnum.move)>-1:
         my_servo.write_angle(45)
     elif str_topic.find(CalibrationEnum.DOOR_AJAR)>-1 and msg.find(MessageEnum.move)>-1:
