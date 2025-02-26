@@ -1,24 +1,23 @@
+import time
 from machine import UART
 
 class MyUART:
-    
     return_cmd = 'FF FF 01 02 00 FC FF FF 01 02 00 FC'
-    
-    
-    def __init__(self, uart_id = 2, baudrate=1000000, bits=8, parity=None, stop=1, rx=16,tx=17):
+
+    def __init__(self, uart_id=1, baudrate=1000000, bits=8, parity=None, stop=1, rx=16, tx=17):
         self.uart = UART(uart_id)
-        self.uart.init(baudrate=baudrate, bits=bits, parity=parity, stop=stop, rx=rx,tx=tx)
-    
+        self.uart.init(baudrate=baudrate, bits=bits, parity=parity, stop=stop, rx=rx, tx=tx)
+
     def write(self, data):
         print('write data: %s ' % (data))
         data = bytes.fromhex(data)
         self.uart.write(data)
-        
+
     def read(self):
         if self.uart.any():
             text = self.uart.readline()
             return text
-        
+
     def is_return_cmd_success(self):
         print('checking return...')
         data = self.read()
@@ -28,7 +27,7 @@ class MyUART:
             return True
         else:
             return False
-        
+
     def check_sum(self, hex_str):
         """
         Check Sum = ~ (ID + Length + Instruction + Parameter1 + ... Parameter N) 若
@@ -46,7 +45,7 @@ class MyUART:
 
         inverted_result = ~int(hex_result, 16) & 0xFF # 转换成十进制之后取反
         hex_string = hex(abs(inverted_result)).upper()[2:]  # 转换成十六进制去掉结果前面的'0X'
-        
+
         if len(hex_string) % 2 != 0:
             return '0' + hex_string
         else:
@@ -59,7 +58,7 @@ class MyUART:
         hex_string = hex(int(steps))[2:]  # 转换为十六进制字符串，去掉前面的'0x'
         if len(hex_string) % 2 != 0:
             hex_string = '0' + hex_string  # 确保字符串长度为偶数，方便分组
-        byte_list = [hex_string[i:i+2] for i in range(0, len(hex_string), 2)]
+        byte_list = [hex_string[i:i + 2] for i in range(0, len(hex_string), 2)]
         return byte_list
 
     def get_instructions(self, steps):
@@ -83,3 +82,35 @@ class MyUART:
         print('clear data: %s ' % (data))
         hex_data = bytes.fromhex('FF FF 01 02 0A F2')  # clear data
         self.uart.write(hex_data)
+
+    def open_torque(self):
+        data = 'FF FF 01 04 03 28 01 CE '
+        print('open_torque data: %s ' % (data))
+        hex_data = bytes.fromhex(data)
+        self.uart.write(hex_data)
+
+    def close_torque(self):
+        data = 'FF FF 01 04 03 28 00 CF'
+        print('close_torque data: %s ' % (data))
+        hex_data = bytes.fromhex(data)
+        self.uart.write(hex_data)
+
+    def get_current_steps(self):
+        while self.uart.any():
+            self.uart.read()
+
+        data = 'FF FF 01 04 02 38 02 BE'
+        print('get_current_steps data: %s ' % (data))
+        hex_data = bytes.fromhex('FF FF 01 04 02 38 02 BE')
+        self.uart.write(hex_data)
+        time.sleep(0.5)  # 等待舵机返回数据
+
+        if self.uart.any():  # 检查 UART 是否有返回数据
+            read_data = self.uart.read()
+            print(read_data)
+            if len(read_data) >= 7 and read_data[3] == 0x04:  # 确保数据长度正确
+                data_low = read_data[5]
+                data_high = read_data[6]
+                value = (data_high << 8) | data_low  # 计算16位数据
+                return value, read_data
+        return None, None  # 读取失败

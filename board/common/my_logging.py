@@ -1,4 +1,4 @@
-from common import logging
+from board.common import logging
 
 # Create logger
 logger = logging.getLogger('esp32')

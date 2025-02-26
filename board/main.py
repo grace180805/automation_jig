@@ -1,4 +1,8 @@
 # Complete project details at https://RandomNerdTutorials.com/micropython-programming-with-esp32-and-esp8266/
+import json
+
+import uart as uart
+
 from board.common.my_servo import MyServo
 from board.common.wifi import WiFi
 from board.common.config import configure
@@ -6,7 +10,7 @@ from board.common.my_mqtt import MyMQTT
 from board.common.my_uart import MyUART
 from board.common.enum_data import CalibrationEnum
 from board.common.enum_data import MessageEnum
-from common import logging
+from board.common import logging
 
 import time
 import ubinascii
@@ -41,7 +45,6 @@ def get_logger():
     logger.addHandler(stream_handler)
     return logger
 
-
 def sub_cb(topic, msg):
     str_topic = topic.decode("utf-8")
     str_msg = msg.decode("utf-8")
@@ -51,7 +54,7 @@ def sub_cb(topic, msg):
 
     uart = MyUART()  
     my_servo = MyServo()
-    
+
     if (str_topic.find(CalibrationEnum.LOCK_OPEN)>-1
         or str_topic.find(CalibrationEnum.LOCK_CLOSE)>-1
         or str_topic.find(CalibrationEnum.LOCK_JUST_OPEN)>-1
@@ -80,8 +83,15 @@ def sub_cb(topic, msg):
         my_servo.write_angle(35)
     elif str_topic.find(CalibrationEnum.DOOR_OPEN)>-1 and msg.find(MessageEnum.move)>-1:
         my_servo.write_angle(5)
-        
-        
+
+    elif (str_topic.find(CalibrationEnum.LOCK_FLIPUP) > -1) and msg.find(MessageEnum.move) > -1:
+        # inst = uart.get_instructions(value)
+        # uart.clear_data()
+        # time.sleep(2)
+        # uart.write(inst)
+        uart.open_torque()
+    elif (str_topic.find(CalibrationEnum.LOCK_FLIPDOWN) > -1) and msg.find(MessageEnum.move) > -1:
+        uart.close_torque()
 
 def restart_and_reconnect():
     print('Failed to connect to MQTT broker. Reconnecting...')
@@ -100,7 +110,14 @@ if __name__ == '__main__':
     mqtt_user = configure["mqtt_user"]
     mqtt_pwd = configure["mqtt_pwd"]
     sub_topic = configure["sub_topic"]
-    
+
+    # current_position = uart.read_servo_position()  # 读取当前角度
+    # if current_position is not None:
+    #     uart.enable_torque(True)
+    #     print(f"Torque Enabled! Servo holding position at {current_position}.")
+    # else:
+    #     print("Failed to read servo position!")
+
     my_mqtt= MyMQTT(client_id = client_id, mqtt_server = mqtt_server,mqtt_user=mqtt_user, mqtt_pwd = mqtt_pwd)
     
     try:
@@ -117,4 +134,3 @@ if __name__ == '__main__':
             mqtt_client.check_msg()
         except OSError as e:
             restart_and_reconnect()
-    
