@@ -7,3 +7,4 @@ appDirectory/
 venv/
 out/
 *.log
+*.db
