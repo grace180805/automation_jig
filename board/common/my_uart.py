@@ -3,11 +3,9 @@ import time
 from machine import UART
 
 class MyUART:
-
     return_cmd = 'FF FF 01 02 00 FC FF FF 01 02 00 FC'
 
-
-    def __init__(self, uart_id = 2, baudrate=1000000, bits=8, parity=None, stop=1, rx=16,tx=17):
+    def __init__(self, uart_id=1, baudrate=1000000, bits=8, parity=None, stop=1, rx=16, tx=17):
         self.uart = UART(uart_id)
         self.uart.init(baudrate=baudrate, bits=bits, parity=parity, stop=stop, rx=rx, tx=tx)
 
@@ -85,3 +83,35 @@ class MyUART:
         print('clear data: %s ' % (data))
         hex_data = bytes.fromhex('FF FF 01 02 0A F2')  # clear data
         self.uart.write(hex_data)
+
+    def open_torque(self):
+        data = 'FF FF 01 04 03 28 01 CE '
+        print('open_torque data: %s ' % (data))
+        hex_data = bytes.fromhex(data)
+        self.uart.write(hex_data)
+
+    def close_torque(self):
+        data = 'FF FF 01 04 03 28 00 CF'
+        print('open_torque data: %s ' % (data))
+        hex_data = bytes.fromhex(data)
+        self.uart.write(hex_data)
+
+    def get_current_steps(self):
+        while self.uart.any():
+            self.uart.read()
+
+        data = 'FF FF 01 04 02 38 02 BE'
+        print('get_current_steps data: %s ' % (data))
+        hex_data = bytes.fromhex('FF FF 01 04 02 38 02 BE')
+        self.uart.write(hex_data)
+        time.sleep(0.5)  # 等待舵机返回数据
+
+        if self.uart.any():  # 检查 UART 是否有返回数据
+            read_data = self.uart.read()
+            print(read_data)
+            if len(read_data) >= 7 and read_data[3] == 0x04:  # 确保数据长度正确
+                data_low = read_data[5]
+                data_high = read_data[6]
+                value = (data_high << 8) | data_low  # 计算16位数据
+                return value, read_data
+        return None, None  # 读取失败

@@ -11,4 +11,3 @@ configure = {
     'mqtt_pwd': "Abc-1234",
     'sub_topic': b'jig01/#',
     }
-MAX_RETRIES = 2
