@@ -46,9 +46,10 @@ app.config['MQTT_TLS_INSECURE'] = False
 app.config['MQTT_TLS_CA_CERTS'] = 'MQTT/isrgrootx1.pem'  # CA for HiveMQ, read: https://letsencrypt.org/about/
 app.config['MQTT_TLS_VERSION'] = ssl.PROTOCOL_TLSv1_2
 app.config['MQTT_TLS_CIPHERS'] = None
+app.config['MQTT_LAST_WILL_QOS'] = 2
 
 topic = '#'
-
+status_topic = 'status'
 mqtt_client = Mqtt(app)
 
 # received_messages = []
@@ -57,7 +58,7 @@ mqtt_client = Mqtt(app)
 @mqtt_client.on_connect()
 def handle_connect(client, userdata, flags, rc):
     if rc == 0:
-        print('Connected successfully')
+        # print('Connected successfully')
         mqtt_client.subscribe(topic)  # subscribe topic
     else:
         print('Bad connection. Code:', rc)
@@ -69,6 +70,7 @@ def handle_mqtt_message(client, userdata, message):
         topic=message.topic,
         payload=message.payload.decode()
     )
+
     # received_messages.append(data['payload'])
     if Message.SUCCESS.value in str(message.payload):
         record = Jig.get(Jig.jig_id == message.topic[:5])
@@ -91,6 +93,17 @@ def handle_mqtt_message(client, userdata, message):
 
         record.save()
 
+    if message.topic.find(status_topic) > -1:
+        msg = data['payload']
+        steps = int(msg.split('=')[1])
+        jig_status_record = Jig.get(Jig.jig_id == message.topic[:5])
+        lock_and_door_steps_record = LockAndDoorSteps.get(LockAndDoorSteps.model == jig_status_record.model)
+        if steps <= lock_and_door_steps_record.lock_just_lock_steps+10:
+            jig_status_record.lock_state = LockAndDoorStatus.LOCK_LOCK.value
+
+        if lock_and_door_steps_record.lock_just_unlock_steps-10 <= steps:
+            jig_status_record.lock_state = LockAndDoorStatus.LOCK_UNLOCK.value
+        jig_status_record.save()
     print('Received message on topic: {topic} with payload: {payload}'.format(**data))
 
 

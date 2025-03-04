@@ -10,4 +10,5 @@ configure = {
     'mqtt_user': "automation",
     'mqtt_pwd': "Abc-1234",
     'sub_topic': b'jig01/#',
+    'status_topic': b'jig01/status',
     }
