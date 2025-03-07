@@ -65,7 +65,7 @@ def sub_cb(topic, msg):
         step = steps.split('=')[1]
         step = step[:-1]
         inst = uart.get_instructions(step)
-        time.sleep(2)
+        #         time.sleep(2)
         uart.write(inst)
 
         time.sleep(2)
@@ -75,12 +75,15 @@ def sub_cb(topic, msg):
         uart.close_torque()
     elif str_topic.find(CalibrationEnum.DOOR_CLOSE) > -1 and msg.find(MessageEnum.move) > -1:
         my_servo.write_angle(0)
+        time.sleep(1)
         mqtt_client.publish(topic, MessageEnum.success)
     elif str_topic.find(CalibrationEnum.DOOR_AJAR) > -1 and msg.find(MessageEnum.move) > -1:
         my_servo.write_angle(10)
+        time.sleep(1)
         mqtt_client.publish(topic, MessageEnum.success)
     elif str_topic.find(CalibrationEnum.DOOR_OPEN) > -1 and msg.find(MessageEnum.move) > -1:
         my_servo.write_angle(45)
+        time.sleep(1)
         mqtt_client.publish(topic, MessageEnum.success)
 
     elif (str_topic.find(CalibrationEnum.LOCK_FLIPUP) > -1) and msg.find(MessageEnum.move) > -1:
@@ -96,11 +99,13 @@ temp_location = 0
 def get_location_and_publish():
     while True:
         global temp_location, uart
-        location = uart.get_current_steps()
-        if temp_location != location and location is not None:
-            temp_location = location
-            mqtt_client.publish(configure["status_topic"], "steps=%s" % location)
-        time.sleep(2)
+        if uart.is_servo_moving() is False:
+            time.sleep(2)
+            location = uart.get_current_steps()
+            if temp_location != location and location is not None:
+                temp_location = location
+                mqtt_client.publish(configure["jig_id"] + '/' + CalibrationEnum.LOCK_STATUS, "steps=%s" % location)
+
 
 
 def restart_and_reconnect():
