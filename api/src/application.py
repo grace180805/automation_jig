@@ -49,7 +49,6 @@ app.config['MQTT_TLS_CIPHERS'] = None
 app.config['MQTT_LAST_WILL_QOS'] = 2
 
 topic = '#'
-status_topic = 'status'
 mqtt_client = Mqtt(app)
 
 # received_messages = []
@@ -84,16 +83,16 @@ def handle_mqtt_message(client, userdata, message):
                 or (OperationEnum.LOCK_JUST_CLOSE.value in message.topic):
             record.lock_state = LockAndDoorStatus.LOCK_LOCK.value
 
-        elif (OperationEnum.DOOR_OPEN.value in message.topic) \
-                or (OperationEnum.DOOR_AJAR.value in message.topic):
+        elif OperationEnum.DOOR_OPEN.value in message.topic:
             record.door_state = LockAndDoorStatus.DOOR_OPEN.value
-
+        elif OperationEnum.DOOR_AJAR.value in message.topic:
+            record.door_state = LockAndDoorStatus.DOOR_AJAR.value
         elif OperationEnum.DOOR_CLOSE.value in message.topic:
             record.door_state = LockAndDoorStatus.DOOR_CLOSED.value
 
         record.save()
 
-    if message.topic.find(status_topic) > -1:
+    if data['topic'].find(OperationEnum.LOCK_STATUS.value) > -1 and data['payload'].find('steps') > -1:
         msg = data['payload']
         steps = int(msg.split('=')[1])
         jig_status_record = Jig.get(Jig.jig_id == message.topic[:5])
@@ -128,7 +127,7 @@ def jig_model_api():
     if jig_model not in jig_model_options:
         return jsonify({'code': 10400, 'message': 'the jig model is not existed!'})
     new_topic = '{}/{}'.format(jig_id, OperationEnum.DOOR_CLOSE.value)
-    publish_result = mqtt_client.publish(new_topic, qos=2)
+    publish_result = mqtt_client.publish(new_topic, Message.MOVE.value, qos=2)
     app.logger.info("publish init jig topic")
     record = Jig.get(Jig.jig_id == jig_id)
     # update
@@ -178,7 +177,11 @@ def send_topic_api():
         steps = model_steps_row.door_closed_steps
 
     new_topic = '{}/{}'.format(jig_id, topic)
-    publish_result = mqtt_client.publish(new_topic, Message.MOVE.value+'&steps='+str(steps), qos=2)
+    if topic != OperationEnum.LOCK_STATUS.value:
+        publish_result = mqtt_client.publish(new_topic, Message.MOVE.value+'&steps='+str(steps), qos=2)
+    else:
+        publish_result = mqtt_client.publish(new_topic, qos=2)
+
     # if not received_messages:
     #     return jsonify({"message": "No messages received"}), 404
     # latest_message = received_messages.pop(0)

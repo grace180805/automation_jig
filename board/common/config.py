@@ -9,6 +9,6 @@ configure = {
     #"mqtt_server": b'78fec312d8054d7a91db5a68da9c9c29.s1.eu.hivemq.cloud',
     'mqtt_user': "automation",
     'mqtt_pwd': "Abc-1234",
+    'jig_id': 'jig01',
     'sub_topic': b'jig01/#',
-    'status_topic': b'jig01/status',
     }
