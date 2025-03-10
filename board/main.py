@@ -139,8 +139,3 @@ if __name__ == '__main__':
             mqtt_client.check_msg()
         except OSError as e:
             restart_and_reconnect()
-
-
-
-
-
