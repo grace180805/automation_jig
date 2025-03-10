@@ -4,7 +4,7 @@ from flask import request, jsonify
 from flask_mqtt import Mqtt
 
 import config
-from database import Jig, LockAndDoorSteps
+from database import Jig, LockAndDoorSteps, add_or_update_jig
 from api_enum_data import OperationEnum, LockAndDoorStatus, Message
 
 import logging
@@ -109,7 +109,7 @@ def handle_mqtt_message(client, userdata, message):
 @app.route('/send', methods=['POST'])
 def publish_message():
     request_data = request.get_json()
-    jig_id = request_data["jigId"]
+    jig_id = request_data["jigID"]
     print(jig_id)
     device_type = request_data["deviceType"]
     topic = request_data["topic"]
@@ -121,18 +121,21 @@ def publish_message():
 @app.route('/jigModel', methods=['PUT'])
 def jig_model_api():
     request_data = request.get_json()
-    jig_id = request_data["jigId"]
+    jig_id = request_data["jigID"]
     jig_model = request_data["model"]
-    jig_model_options = ["forma_scan01", "forma_scan02"]
+    jig_model_options = ["forma_scan01", "forma_scan02", "forma_scan03", "forma_fin01", "forma_fin02",
+                         "forma_euro01", "forma_euro02", "forma_euro03", "forma_swiss01", "forma_swiss02",
+                         "forma_swiss03"]
     if jig_model not in jig_model_options:
         return jsonify({'code': 10400, 'message': 'the jig model is not existed!'})
     new_topic = '{}/{}'.format(jig_id, OperationEnum.DOOR_CLOSE.value)
     publish_result = mqtt_client.publish(new_topic, Message.MOVE.value, qos=2)
-    app.logger.info("publish init jig topic")
-    record = Jig.get(Jig.jig_id == jig_id)
-    # update
-    record.model = jig_model
-    record.save()
+    app.logger.info("published init jig topic.")
+    # record = Jig.get(Jig.jig_id == jig_id)
+    # # update
+    # record.model = jig_model
+    # record.save()
+    add_or_update_jig(jig_id, jig_model)
     # return jsonify({'code': publish_result[0]})
     return jsonify({'code': 200, 'message': 'success'})
 
@@ -148,7 +151,7 @@ def jig_model_api():
 @app.route('/sendTopic', methods=['POST'])
 def send_topic_api():
     request_data = request.get_json()
-    jig_id = request_data["jigId"]
+    jig_id = request_data["jigID"]
     device_type = request_data["deviceType"]
     topic = request_data["topic"]
     model = Jig.select().where(Jig.jig_id == jig_id).get().model

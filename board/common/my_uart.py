@@ -85,14 +85,22 @@ class MyUART:
         self.uart.write(hex_data)
 
     def open_torque(self):
-        data = 'FF FF 01 04 03 28 01 CE '
+        # print('open torque protection: %s ' % (data))
+        # hex_data = bytes.fromhex(data)
+        # self.uart.write(hex_data)
+        #
+        # print('open torque LED alarm: %s ' % (data))
+        # hex_data = bytes.fromhex(data)
+        # self.uart.write(hex_data)
+
+        data = 'FF FF 01 04 03 28 01 CE'
         print('open_torque data: %s ' % (data))
         hex_data = bytes.fromhex(data)
         self.uart.write(hex_data)
 
     def close_torque(self):
         data = 'FF FF 01 04 03 28 00 CF'
-        #         print('close_torque data: %s ' % (data))
+        print('close_torque data: %s ' % (data))
         hex_data = bytes.fromhex(data)
         self.uart.write(hex_data)
 
@@ -123,9 +131,3 @@ class MyUART:
             return False
         else:
             return True
-
-
-
-
-
-
