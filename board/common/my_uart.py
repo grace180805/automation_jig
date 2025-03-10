@@ -109,7 +109,7 @@ class MyUART:
             self.uart.read()
         hex_data = bytes.fromhex('FF FF 01 04 02 38 02 BE')
         self.uart.write(hex_data)
-        time.sleep(0.5)  # 等待舵机返回数据
+        time.sleep(0.2)  # 等待舵机返回数据
 
         if self.uart.any():  # 检查 UART 是否有返回数据
             read_data = self.uart.read()
@@ -119,3 +119,15 @@ class MyUART:
                 return location
 
         return None
+
+    def is_servo_moving(self):
+        data = 'FF FF 01 04 02 42 01 B5'
+        hex_data = bytes.fromhex(data)
+        self.uart.write(hex_data)
+        time.sleep(0.2)
+        data = self.read()
+        return_data = ' '.join(["%02X" % x for x in data])
+        if return_data == 'FF FF 01 03 00 00 FB':
+            return False
+        else:
+            return True
