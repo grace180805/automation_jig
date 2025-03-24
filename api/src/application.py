@@ -97,10 +97,10 @@ def handle_mqtt_message(client, userdata, message):
         steps = int(msg.split('=')[1])
         jig_status_record = Jig.get(Jig.jig_id == message.topic[:5])
         lock_and_door_steps_record = LockAndDoorSteps.get(LockAndDoorSteps.model == jig_status_record.model)
-        if steps <= lock_and_door_steps_record.lock_just_lock_steps+10:
+        if steps <= lock_and_door_steps_record.lock_just_lock_steps + 10:
             jig_status_record.lock_state = LockAndDoorStatus.LOCK_LOCK.value
 
-        if lock_and_door_steps_record.lock_just_unlock_steps-10 <= steps:
+        if lock_and_door_steps_record.lock_just_unlock_steps - 10 <= steps:
             jig_status_record.lock_state = LockAndDoorStatus.LOCK_UNLOCK.value
         jig_status_record.save()
     print('Received message on topic: {topic} with payload: {payload}'.format(**data))
@@ -128,16 +128,12 @@ def jig_model_api():
                          "forma_swiss03"]
     if jig_model not in jig_model_options:
         return jsonify({'code': 10400, 'message': 'the jig model is not existed!'})
-    new_topic = '{}/{}'.format(jig_id, OperationEnum.DOOR_CLOSE.value)
-    publish_result = mqtt_client.publish(new_topic, Message.MOVE.value, qos=2)
-    app.logger.info("published init jig topic.")
-    # record = Jig.get(Jig.jig_id == jig_id)
-    # # update
-    # record.model = jig_model
-    # record.save()
     add_or_update_jig(jig_id, jig_model)
-    # return jsonify({'code': publish_result[0]})
-    return jsonify({'code': 200, 'message': 'success'})
+    new_topic = '{}/{}'.format(jig_id, OperationEnum.DOOR_CLOSE.value)
+    mqtt_client.publish(new_topic, Message.MOVE.value, qos=2)
+    app.logger.info("published init jig topic.")
+    record = Jig.get(Jig.jig_id == jig_id)
+    return jsonify({'code': 200, 'data': record.model, 'message': 'success'})
 
 
 # def get_angel(topic):
