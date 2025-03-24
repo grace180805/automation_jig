@@ -1,15 +1,21 @@
+import sys
+import os
+
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 import ssl
 
 from flask import request, jsonify
+from flask import Flask
 from flask_mqtt import Mqtt
 
 import config
+
 from database import Jig, LockAndDoorSteps, add_or_update_jig
 from api_enum_data import OperationEnum, LockAndDoorStatus, Message
 
 import logging
 from logging.handlers import RotatingFileHandler
-from flask import Flask
 
 app = Flask(__name__)
 
@@ -50,6 +56,7 @@ app.config['MQTT_LAST_WILL_QOS'] = 2
 
 topic = '#'
 mqtt_client = Mqtt(app)
+
 
 # received_messages = []
 
@@ -177,7 +184,7 @@ def send_topic_api():
 
     new_topic = '{}/{}'.format(jig_id, topic)
     if topic != OperationEnum.LOCK_STATUS.value:
-        publish_result = mqtt_client.publish(new_topic, Message.MOVE.value+'&steps='+str(steps), qos=2)
+        publish_result = mqtt_client.publish(new_topic, Message.MOVE.value + '&steps=' + str(steps), qos=2)
     else:
         publish_result = mqtt_client.publish(new_topic, qos=2)
 
