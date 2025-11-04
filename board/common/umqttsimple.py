@@ -10,7 +10,7 @@ class MQTTException(Exception):
 
 class MQTTClient:
 
-    def __init__(self, client_id, server, port=0, user=None, password=None, keepalive=0,
+    def __init__(self, client_id, server, port=0, user=None, password=None, keepalive=60,
                  ssl=False, ssl_params={}):
 
         if port == 0:
@@ -28,7 +28,7 @@ class MQTTClient:
         self.keepalive = keepalive
         self.lw_topic = None
         self.lw_msg = None
-        self.lw_qos = 0
+        self.lw_qos = 2
         self.lw_retain = False
 
     def _send_str(self, s):
