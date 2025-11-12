@@ -6,7 +6,7 @@ class MyUART:
     return_cmd = 'FF FF 01 02 00 FC FF FF 01 02 00 FC'
 
     def __init__(self, uart_id=2, baudrate=1000000, bits=8, parity=None, stop=1, rx=16, tx=17):
-        self.uart = UART(uart_id)
+        self.uart = UART(2)
         self.uart.init(baudrate=baudrate, bits=bits, parity=parity, stop=stop, rx=rx, tx=tx)
 
     def write(self, data):
@@ -22,12 +22,15 @@ class MyUART:
     def is_return_cmd_success(self):
         #         print('checking return...')
         data = self.read()
-        return_data = ' '.join(["%02X" % x for x in data])
-        #         print('read data: %s ' % (return_data))
-        if return_data == self.return_cmd:
-            return True
-        else:
-            return False
+        print(data)
+        if data is not None:
+            return_data = ' '.join(["%02X" % x for x in data])
+            #         print('read data: %s ' % (return_data))
+            if return_data == self.return_cmd:
+                return True
+            else:
+                return False
+        return True
 
     def check_sum(self, hex_str):
         """
@@ -44,7 +47,7 @@ class MyUART:
         else:
             hex_result = hex(sum_result).upper()[2:]
 
-        inverted_result = ~int(hex_result, 16) & 0xFF # 转换成十进制之后取反
+        inverted_result = ~int(hex_result, 16) & 0xFF  # 转换成十进制之后取反
         hex_string = hex(abs(inverted_result)).upper()[2:]  # 转换成十六进制去掉结果前面的'0X'
 
         if len(hex_string) % 2 != 0:
@@ -107,6 +110,9 @@ class MyUART:
     def get_current_steps(self):
         while self.uart.any():
             self.uart.read()
+
+        data = 'FF FF 01 04 02 38 02 BE'
+        #         print('get_current_steps data: %s ' % (data))
         hex_data = bytes.fromhex('FF FF 01 04 02 38 02 BE')
         self.uart.write(hex_data)
         time.sleep(0.2)  # 等待舵机返回数据
