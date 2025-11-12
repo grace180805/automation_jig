@@ -1,4 +1,4 @@
-from board.common.umqttsimple import MQTTClient
+from common.umqttsimple import MQTTClient
 
 
 class MyMQTT:
