@@ -1,6 +1,10 @@
 import sys
 import os
 
+from api.src.common.testrail_tool import update_testrun_in_plan_cases, clone_testrun_to_plan, add_cases_to_test_run, \
+    get_unpassed_case_lst, get_aa_test_case_list, send_result_to_test_rail, get_test_run_details, add_plan, \
+    get_plan_ids, add_run_to_plan, update_plan_entry_name, get_test_run_results, get_user
+
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 import ssl
@@ -207,5 +211,387 @@ def status_api(jig_id):
     return jsonify({'code': 200, 'data': data, 'message': 'success'})
 
 
+"""
+Testrail API
+"""
+@app.route('/updateTestrunInPlanCases', methods=['PUT'])
+def update_testrun_in_plan_cases_api():
+    """
+    request body:
+    {
+        "testplanId": 123,     // target plan id
+        "updateTestrunId": 456,  // target test run id
+        "caseListOrTestrunId": [1, 2, 3],  // list of case ids or test run id
+        "removeOrAdd": "remove"  // "remove" or "add"
+    }
+    :return:
+    """
+    try:
+        request_data = request.get_json()
+
+        if not request_data:
+            raise ValueError("Invalid JSON data received.")
+
+        testplan_id = request_data["testplanId"]
+        update_testrun_id = request_data["updateTestrunId"]
+        case_list_or_testrun_id = request_data["caseListOrTestrunId"]
+        remove_or_add = request_data["removeOrAdd"]
+
+        if None in [testplan_id, update_testrun_id, case_list_or_testrun_id, remove_or_add]:
+            raise ValueError("Missing required parameters in JSON data.")
+
+        update_testrun_in_plan_cases(testplan_id, update_testrun_id, case_list_or_testrun_id, remove_or_add)
+        return jsonify({'code': 200, 'message': 'success'})
+
+    except ValueError as ve:
+        app.logger.error(f"Value error in updateTestrunInPlanCases API: {str(ve)}")
+        return jsonify({'code': 400, 'message': str(ve)}), 400
+
+    except Exception as e:
+        app.logger.error(f"An unexpected error occurred in updateTestrunInPlanCases API: {str(e)}")
+        return jsonify({'code': 500, 'message': 'Internal server error!'}), 500
+
+
+@app.route('/cloneTestrunToPlan', methods=['POST'])
+def clone_testrun_to_plan_api():
+    """
+    request body:
+    {
+        "copyFrom": 123,     // source test run id
+        "toPlan": 456,       // target plan id
+        "newTestrunName": "new test run name"  // new test run name
+    :return:
+    """
+    try:
+        request_data = request.get_json()
+
+        if not request_data:
+            raise ValueError("Invalid JSON data received.")
+
+        source_testrun_id = request_data["copyFrom"]
+        target_testplan_id = request_data["toPlan"]
+        target_testrun_name = request_data["newTestrunName"]
+
+        if None in [source_testrun_id, target_testplan_id, target_testrun_name]:
+            raise ValueError("Missing required parameters in JSON data.")
+
+        clone_testrun_to_plan(source_testrun_id, target_testplan_id, target_testrun_name)
+        app.logger.info(
+            f"Successfully cloned test run {source_testrun_id} to plan {target_testplan_id} with name {target_testrun_name}")
+        return jsonify({'code': 200, 'message': 'success'})
+
+    except ValueError as ve:
+        app.logger.error(f"Value error in cloneTestrunToPlan API: {str(ve)}")
+        return jsonify({'code': 400, 'message': str(ve)}), 400
+
+    except Exception as e:
+        app.logger.error(f"An unexpected error occurred in cloneTestrunToPlan API: {str(e)}")
+        return jsonify({'code': 500, 'message': 'Internal server error!'}), 500
+
+@app.route('/addNewCasesToTestrun', methods=['POST'])
+def add_cases_to_test_run_api():
+    """
+    :request body:
+    {
+        "copyFrom": 123,
+        "toPlan": 456,
+        "toRun": 789
+    }
+    :return:
+    """
+    try:
+        request_data = request.get_json()
+
+        if not request_data:
+            raise ValueError("Invalid JSON data received.")
+
+        copyFrom_testrun_id = request_data["copyFrom"]
+        copy_to_plan_id = request_data["toPlan"]
+        copy_to_testrun_id = request_data["toRun"]
+
+        if not all([copyFrom_testrun_id, copy_to_plan_id, copy_to_testrun_id]):
+            raise ValueError("Missing required parameters in JSON data.")
+
+        add_cases_to_test_run(copyFrom_testrun_id, copy_to_plan_id, copy_to_testrun_id)
+        app.logger.info(f"Successfully added cases to test run {copy_to_testrun_id}")
+        return jsonify({'code': 200, 'message': 'success'})
+    except ValueError as ve:
+        app.logger.error(f"Value error in addNewCasesToTestrun API: {str(ve)}")
+        return jsonify({'code': 400, 'message': str(ve)}), 400
+
+    except Exception as e:
+        app.logger.error(f"An unexpected error occurred in addNewCasesToTestrun API: {str(e)}")
+        return jsonify({'code': 500, 'message': 'Internal server error!'}), 500
+
+
+# --------------------Android UI automation request----------------------
+@app.route('/getUnpassedCaseList/<test_run_id>', methods=['GET'])
+def get_test_run_unpassed_case_lst_api(test_run_id):
+    """
+    :param test_run_id:
+    :return: unpassed_case_lst unpassed_case_lst_num
+    """
+    try:
+        test_run_id = test_run_id.strip()
+
+        if not test_run_id:
+            return jsonify({'code': 400, 'message': 'test_run_id is missing or empty!'}), 400
+
+        unpassed_case_lst = list(get_unpassed_case_lst(test_run_id) or [])
+        unpassed_case_lst_num = len(unpassed_case_lst) if unpassed_case_lst else 0
+
+        return jsonify({'code': 200, 'unpassed_case_lst': unpassed_case_lst, 'unpassed_case_lst_num': unpassed_case_lst_num})
+
+    except Exception as e:
+            app.logger.error(f"Failed to get unpassed cases list for test run {test_run_id}: {str(e)}")
+            return jsonify({'code': 500, 'message': 'Internal server error!'}), 500
+
+@app.route('/getTestRunCaseLst/<test_run_id>', methods=['GET'])
+def get_test_run_case_id_list_api(test_run_id):
+    """
+    :param test_run_id:
+    :return: test_run_case_id_list
+    """
+    try:
+        test_run_id = test_run_id.strip()
+
+        if not test_run_id:
+            return jsonify({'code': 400, 'message': 'test_run_id is missing or empty!'}), 400
+
+        test_run_case_id_list = list(get_aa_test_case_list(test_run_id) or [])
+        test_run_case_id_list_num = len(test_run_case_id_list) if test_run_case_id_list else 0
+
+        return (jsonify({'code': 200, 'test_case_id_lst': test_run_case_id_list, 'test_run_case_id_list_num': test_run_case_id_list_num}))
+
+    except Exception as e:
+            app.logger.error(f"Failed to get cases list for test run {test_run_id}: {str(e)}")
+            return jsonify({'code': 500, 'message': 'Internal server error!'}), 500
+
+@app.route('/getTestRunDetails/<test_run_id>', methods=['GET'])
+def get_test_run_details_api(test_run_id):
+    """
+    :param test_run_id:
+    :return: test_run_details
+    """
+    try:
+        test_run_id = test_run_id.strip()
+
+        if not test_run_id:
+            return jsonify({'code': 400, 'message': 'test_run_id is missing or empty!'}), 400
+
+        test_run_details = get_test_run_details(test_run_id)
+        # data = {'test_run_details': test_run_details}
+        return jsonify({'code': 200, 'test_run_details': test_run_details})
+    except Exception as e:
+        app.logger.error(f"Failed to get test run details: {str(e)}")
+        return jsonify({'code': 500, 'message': 'Internal server error!'}), 500
+
+@app.route('/sendResultToTestRail', methods=['POST'])
+def send_result_to_test_rail_api():
+    """
+    :request body:
+        {
+        passCases: [1, 2, 3]
+        notPassCases: [4, 5, 6]
+        testRunId: 123
+        comment: "comment"
+        }
+    :return:
+    """
+    try:
+        request_data = request.get_json()
+
+        if not request_data:
+            app.logger.error("Invalid JSON data received.")
+            return jsonify({'code': 400, 'message': 'Invalid JSON data!'}), 400
+
+        pass_cases_list = request_data["passCases"]
+        unpass_cases_list = request_data["notPassCases"]
+        test_run_id = request_data["testRunId"]
+        comment = request_data["comment"]
+
+        if pass_cases_list is None or unpass_cases_list is None or test_run_id is None or comment is None:
+            app.logger.error("Missing required parameters in JSON data.")
+            return jsonify({'code': 400, 'message': 'Missing required parameters!'}), 400
+
+        send_result_to_test_rail(pass_cases=pass_cases_list, not_pass_cases=unpass_cases_list, test_run_id=test_run_id, comment=comment)
+        return jsonify({'code': 200, 'message': 'success'})
+
+    except Exception as e:
+        app.logger.error(f"Failed to send result to TestRail: {str(e)}")
+        return jsonify({'code': 500, 'message': 'Internal server error!'}), 500
+
+@app.route('/addPlan', methods=['POST'])
+def add_plan_api():
+    """
+    :request body:
+        {
+        projectId
+        planName
+        milestoneId
+        }
+    :return:
+    """
+    try:
+        request_data = request.get_json()
+
+        if not request_data:
+            raise ValueError("Invalid JSON data received.")
+
+        project_id = request_data["projectId"]
+        plan_name = request_data["planName"]
+        milestone_id = request_data["milestoneId"]
+
+        if project_id is None or plan_name is None or milestone_id is None:
+            raise ValueError("Missing required parameters in JSON data.")
+
+        add_plan(project_id=project_id, plan_name=plan_name, milestone_id=milestone_id)
+        return jsonify({'code': 200, 'message': 'success'})
+
+    except ValueError as e:
+        app.logger.error(f"Value error in addPlan API: {str(e)}")
+        return jsonify({'code': 400, 'message': str(e)}), 400
+
+    except Exception as e:
+        app.logger.error(f"An unexpected error occurred in addPlan API: {str(e)}")
+        return jsonify({'code': 500, 'message': 'Internal server error!'}), 500
+
+@app.route('/getPlanId/<project_id>', methods=['GET'])
+def get_plan_ids_api(project_id):
+    """
+    :param project_id:
+    :return: plan_ids
+    """
+    try:
+        project_id = project_id.strip()
+        milestone_id = request.args.get('milestoneId')
+
+        if project_id is None or milestone_id is None:
+            return jsonify({'code': 400, 'message': 'Missing required parameters!'}), 400
+
+        plan_ids = get_plan_ids(project_id=project_id, milestone_id=milestone_id)
+        # data = {'plan_ids': plan_ids}
+        return jsonify({'code': 200, 'plans': plan_ids})
+
+    except Exception as e:
+        app.logger.error(f"Failed to get plan IDs: {str(e)}")
+        return jsonify({'code': 500, 'message': 'Internal server error!'}), 500
+
+
+@app.route('/addRunToPlan', methods=['POST'])
+def add_run_to_plan_api():
+    """
+    :request body:
+        {
+        planId
+        caseId
+        suiteId
+        testrunName
+        }
+    :return: test_run_id
+    """
+    try:
+        request_data = request.get_json()
+        if not request_data:
+            return jsonify({'code': 400, 'message': 'Invalid JSON data!'}), 400
+
+        plan_id = request_data["planId"]
+        case_id = request_data["caseId"]
+        suite_id = request_data["suiteId"]
+        testrun_name = request_data["testrunName"]
+        if None in [plan_id, case_id, suite_id, testrun_name]:
+            return jsonify({'code': 400, 'message': 'Invalid request data!'}), 400
+
+        test_run_id = add_run_to_plan(plan_id, case_id, suite_id, testrun_name)
+        return jsonify({'code': 200, 'testRunId': test_run_id})
+
+    except KeyError as e:
+        app.logger.error(f"Missing key in JSON data: {str(e)}")
+        return jsonify({'code': 400, 'message': f'Missing required parameter: {str(e)}'}), 400
+    except Exception as e:
+        app.logger.error(f"Failed to add run to plan: {str(e)}")
+        return jsonify({'code': 500, 'message': 'Internal server error!'}), 500
+
+@app.route('/updatePlanEntryName', methods=['POST'])
+def update_plan_entry_name_api():
+    """
+    :request body:
+        {
+        testRunId
+        testRunName
+        }
+    :return:
+    """
+    try:
+        request_data = request.get_json()
+        if not request_data:
+            return jsonify({'code': 400, 'message': 'Invalid JSON data!'}), 400
+
+        test_run_id = request_data["testRunId"]
+        plan_entry_name = request_data["testRunName"]
+
+        if test_run_id is None or plan_entry_name is None:
+            return jsonify({'code': 400, 'message': 'Missing required parameters!'}), 400
+
+        update_plan_entry_name(test_run_id, plan_entry_name)
+        return jsonify({'code': 200, 'message': 'success'})
+
+    except KeyError as e:
+        app.logger.error(f"Missing key in JSON data: {str(e)}")
+        return jsonify({'code': 400, 'message': f'Missing required parameter: {str(e)}'}), 400
+
+    except Exception as e:
+        app.logger.error(f"Failed to update plan entry name: {str(e)}")
+        return jsonify({'code': 500, 'message': 'Internal server error!'}), 500
+
+# --------------------Carol request----------------------
+@app.route('/getTestRunResults/<test_run_id>', methods=['GET'])
+def get_test_run_results_api(test_run_id):
+    """
+    :param test_run_id:
+    :return: test_run_results
+    """
+    try:
+        test_run_id = test_run_id.strip()
+
+        if test_run_id is None:
+            return jsonify({'code': 400, 'message': 'Missing required parameters!'}), 400
+
+        test_run_results = get_test_run_results(test_run_id=test_run_id)
+        # data = {'plan_ids': plan_ids}
+        return jsonify({'code': 200, 'test_run_results': test_run_results})
+
+    except Exception as e:
+        app.logger.error(f"Failed to get plan IDs: {str(e)}")
+        return jsonify({'code': 500, 'message': 'Internal server error!'}), 500
+
+@app.route('/getUser/<user_id>', methods=['GET'])
+def get_user_api(user_id):
+    """
+    An error occurred while getting user with ID 30: 403 Client Error: Forbidden for url: /get_user/<user_id>
+    :param user_id:
+    :return: user_name
+    """
+
+    try:
+        user_id = user_id.strip()
+
+        if user_id is None:
+            return jsonify({'code': 400, 'message': 'Missing required parameters!'}), 400
+
+        user_name = get_user(user_id=user_id)
+
+        if user_name is None:  # 检查用户是否存在
+            return jsonify({'code': 404, 'message': 'User not found!'}), 404
+
+        return jsonify({'code': 200, 'user_name': user_name})
+
+    except ValueError as e:  # 处理用户ID格式错误的情况
+        app.logger.error(f"Invalid user ID format: {str(e)}")
+        return jsonify({'code': 400, 'message': 'Invalid user ID format!'}), 400
+    except Exception as e:
+        app.logger.error(f"Failed to get user: {str(e)}")
+        return jsonify({'code': 500, 'message': 'Internal server error!'}), 500
+
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host='172.16.0.95', port=5002, debug=True)
